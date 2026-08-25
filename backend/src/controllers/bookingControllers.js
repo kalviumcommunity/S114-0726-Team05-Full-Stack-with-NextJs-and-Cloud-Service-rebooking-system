@@ -123,3 +123,5 @@ export const cancel = async (req, res, next) => {
     next(error);
   }
 };
+
+// Booking Controllers handle the logic for creating, retrieving, and canceling bookings. They interact with the bookingService to perform database operations and return appropriate responses to the client.
