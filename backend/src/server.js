@@ -1,38 +1,158 @@
-const express = require("express");
-const cors = require("cors");
-const dotenv = require("dotenv");
-const cookieParser = require("cookie-parser");
-const helmet = require("helmet");
+import express from "express";
+import dotenv from "dotenv";
+import cors from "cors";
 
-const connectDB = require("./config/db");
+import connectDB from "./config/db.js";
+
+import authRoutes from "./routes/authRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+import bookingRoutes from "./routes/bookingRoutes.js";
+
+import notFoundMiddleware from "./middleware/notFoundMiddleware.js";
+import errorMiddleware from "./middleware/errorMiddleware.js";
+
+
+// ==================================================
+// LOAD ENVIRONMENT VARIABLES
+// ==================================================
 
 dotenv.config();
 
+
+// ==================================================
+// CREATE EXPRESS APP
+// ==================================================
+
 const app = express();
+
+
+// ==================================================
+// CONNECT TO MONGODB
+// ==================================================
 
 connectDB();
 
-app.use(helmet());
+
+// ==================================================
+// CORS
+// ==================================================
 
 app.use(
   cors({
-    origin: process.env.CLIENT_URL,
-    credentials: true,
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    credentials: true
   })
 );
 
+
+// ==================================================
+// BODY PARSING
+// ==================================================
+
 app.use(express.json());
-app.use(cookieParser());
+
+app.use(
+  express.urlencoded({
+    extended: true
+  })
+);
+
+
+// ==================================================
+// ROOT ROUTE
+// ==================================================
 
 app.get("/", (req, res) => {
-  res.json({
+  res.status(200).json({
     success: true,
-    message: "Urban Company API is running",
+    message: "Urban Rebooking API is running"
   });
 });
 
-const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// ==================================================
+// HEALTH CHECK
+// ==================================================
+
+app.get("/api/health", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Server is healthy"
+  });
 });
+
+
+// ==================================================
+// AUTH ROUTES
+// ==================================================
+
+app.use(
+  "/api/auth",
+  authRoutes
+);
+
+
+// ==================================================
+// USER ROUTES
+// ==================================================
+
+app.use(
+  "/api/users",
+  userRoutes
+);
+
+
+// ==================================================
+// BOOKING ROUTES
+// ==================================================
+
+app.use(
+  "/api/bookings",
+  bookingRoutes
+);
+
+
+// ==================================================
+// 404 MIDDLEWARE
+// ==================================================
+
+app.use(
+  notFoundMiddleware
+);
+
+
+// ==================================================
+// GLOBAL ERROR MIDDLEWARE
+// ==================================================
+
+app.use(
+  errorMiddleware
+);
+
+
+// ==================================================
+// SERVER PORT
+// ==================================================
+
+const PORT =
+  process.env.PORT || 5000;
+
+
+// ==================================================
+// START SERVER
+// ==================================================
+
+app.listen(
+  PORT,
+  () => {
+    console.log("");
+    console.log("======================================");
+    console.log("       URBAN REBOOKING BACKEND");
+    console.log("======================================");
+    console.log(`Server: http://localhost:${PORT}`);
+    console.log(`API:    http://localhost:${PORT}/api`);
+    console.log(`Health: http://localhost:${PORT}/api/health`);
+    console.log("======================================");
+    console.log("");
+  }
+);
