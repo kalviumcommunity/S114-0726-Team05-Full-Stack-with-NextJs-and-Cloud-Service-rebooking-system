@@ -1,103 +1,59 @@
-export const errorHandler = (
-  error,
-  req,
-  res,
-  next
-) => {
-
-  console.error("ERROR:");
-  console.error(error);
+const errorMiddleware = (err, req, res, next) => {
+  console.error("ERROR:", err);
 
 
-  // --------------------------------------
-  // Default status code
-  // --------------------------------------
+  const statusCode =
+    err.statusCode ||
+    err.status ||
+    500;
 
-  let statusCode = 500;
 
-  let message =
+  const message =
+    err.message ||
     "Internal server error";
 
 
-  // --------------------------------------
-  // Custom error status
-  // --------------------------------------
-
-  if (error.statusCode) {
-    statusCode = error.statusCode;
-  }
-
-
-  // --------------------------------------
-  // Custom error message
-  // --------------------------------------
-
-  if (error.message) {
-    message = error.message;
-  }
-
-
-  // --------------------------------------
-  // MongoDB duplicate key
-  // --------------------------------------
-
-  if (error.code === 11000) {
-
-    statusCode = 409;
-
-    const field =
-      Object.keys(error.keyPattern || {})[0];
-
-    message =
-      `${field || "Value"} already exists`;
-  }
-
-
-  // --------------------------------------
   // Mongoose validation error
-  // --------------------------------------
+  if (err.name === "ValidationError") {
+    const errors = Object.values(err.errors).map(
+      (error) => error.message
+    );
 
-  if (
-    error.name === "ValidationError"
-  ) {
-
-    statusCode = 400;
-
-    const messages =
-      Object.values(error.errors)
-        .map((err) => err.message);
-
-    message = messages.join(", ");
+    return res.status(400).json({
+      success: false,
+      message: "Validation error",
+      errors
+    });
   }
 
 
-  // --------------------------------------
-  // Invalid MongoDB ObjectId
-  // --------------------------------------
+  // Mongoose duplicate key error
+  if (err.code === 11000) {
+    const field =
+      Object.keys(err.keyPattern || {})[0] ||
+      "field";
 
-  if (
-    error.name === "CastError"
-  ) {
-
-    statusCode = 400;
-
-    message = "Invalid ID";
+    return res.status(409).json({
+      success: false,
+      message: `${field} already exists`
+    });
   }
 
 
-  // --------------------------------------
-  // Send response
-  // --------------------------------------
+  // Mongoose invalid ObjectId
+  if (err.name === "CastError") {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid ID"
+    });
+  }
+
 
   return res.status(statusCode).json({
-
     success: false,
-
-    message,
-
-    ...(process.env.NODE_ENV === "development" && {
-      stack: error.stack
-    })
-
+    message
   });
-}; 
+};
+
+
+export default errorMiddleware;

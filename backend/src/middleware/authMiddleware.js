@@ -1,27 +1,22 @@
 import jwt from "jsonwebtoken";
+
 import User from "../models/User.js";
 
 
-
-// AUTHENTICATION MIDDLEWARE
-
-const protect = async (req, res, next) => {
+const authMiddleware = async (
+  req,
+  res,
+  next
+) => {
   try {
 
-    
-    // Get Authorization header
-   
-
-    const authorization =
+    const authHeader =
       req.headers.authorization;
 
 
-    // Check if token exists
-   
-
     if (
-      !authorization ||
-      !authorization.startsWith("Bearer ")
+      !authHeader ||
+      !authHeader.startsWith("Bearer ")
     ) {
       return res.status(401).json({
         success: false,
@@ -30,12 +25,8 @@ const protect = async (req, res, next) => {
     }
 
 
-   
-    // Extract token
-   
-
     const token =
-      authorization.split(" ")[1];
+      authHeader.split(" ")[1];
 
 
     if (!token) {
@@ -46,28 +37,18 @@ const protect = async (req, res, next) => {
     }
 
 
-   
-    // Verify JWT
-   
-
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET
-    );
+    const decoded =
+      jwt.verify(
+        token,
+        process.env.JWT_SECRET
+      );
 
 
-    // --------------------------------------
-    // Find user
-    // --------------------------------------
+    const user =
+      await User.findById(
+        decoded.id
+      );
 
-    const user = await User
-      .findById(decoded.id)
-      .select("-password");
-
-
-    // --------------------------------------
-    // Check user exists
-    // --------------------------------------
 
     if (!user) {
       return res.status(401).json({
@@ -77,23 +58,11 @@ const protect = async (req, res, next) => {
     }
 
 
-    // --------------------------------------
-    // Attach user to request
-    // --------------------------------------
-
     req.user = user;
-
-
-   
-    // Continue to controller
- 
 
     next();
 
   } catch (error) {
-
-    // Invalid / expired token
-    
 
     if (
       error.name === "JsonWebTokenError"
@@ -110,20 +79,14 @@ const protect = async (req, res, next) => {
     ) {
       return res.status(401).json({
         success: false,
-        message: "Authentication token has expired"
+        message: "Authentication token expired"
       });
     }
 
 
-    // Other errors
-   
-
-    return res.status(500).json({
-      success: false,
-      message: "Authentication failed"
-    });
+    next(error);
   }
 };
 
 
-export default protect;
+export default authMiddleware;
