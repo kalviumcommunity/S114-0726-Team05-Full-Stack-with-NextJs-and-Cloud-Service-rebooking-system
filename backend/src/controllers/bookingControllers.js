@@ -1,55 +1,46 @@
 import {
-  createBooking,
+  createBooking as createBookingService,
   getUserBookings,
-  cancelBooking
+  getBookingById,
+  updateBooking as updateBookingService,
+  rescheduleBooking as rescheduleBookingService,
+  cancelBooking as cancelBookingService
 } from "../services/bookingService.js";
 
 
-// ==========================================
-// CREATE BOOKING
-// POST /api/bookings
-// ==========================================
+/*
+====================================================
+CREATE BOOKING
+POST /api/bookings
+====================================================
 
-export const create = async (req, res, next) => {
+Example request:
+
+{
+  "service": "Home Cleaning",
+  "category": "Cleaning",
+  "professional": "John",
+  "date": "2026-09-10",
+  "time": "10:00 AM",
+  "address": "Hyderabad",
+  "price": 1500,
+  "notes": "Please bring cleaning supplies"
+}
+====================================================
+*/
+export const createBooking = async (
+  req,
+  res,
+  next
+) => {
+
   try {
 
-    const {
-      service,
-      professional,
-      date,
-      time,
-      address,
-      price
-    } = req.body;
-
-
-    // Check required fields
-    if (
-      !service ||
-      !date ||
-      !time ||
-      !address ||
-      price === undefined
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "All booking details are required"
-      });
-    }
-
-
-    // Create booking
-    const booking = await createBooking(
-      req.user._id,
-      {
-        service,
-        professional,
-        date,
-        time,
-        address,
-        price
-      }
-    );
+    const booking =
+      await createBookingService(
+        req.user._id,
+        req.body
+      );
 
 
     return res.status(201).json({
@@ -64,18 +55,24 @@ export const create = async (req, res, next) => {
 };
 
 
+/*
+====================================================
+GET MY BOOKINGS
+GET /api/bookings/my-bookings
+====================================================
+*/
+export const getMyBookings = async (
+  req,
+  res,
+  next
+) => {
 
-// ==========================================
-// GET USER BOOKINGS
-// GET /api/bookings/my-bookings
-// ==========================================
-
-export const getMine = async (req, res, next) => {
   try {
 
-    const bookings = await getUserBookings(
-      req.user._id
-    );
+    const bookings =
+      await getUserBookings(
+        req.user._id
+      );
 
 
     return res.status(200).json({
@@ -90,19 +87,153 @@ export const getMine = async (req, res, next) => {
 };
 
 
+/*
+====================================================
+GET SINGLE BOOKING
+GET /api/bookings/:id
+====================================================
+*/
+export const getBooking = async (
+  req,
+  res,
+  next
+) => {
 
-// ==========================================
-// CANCEL BOOKING
-// PATCH /api/bookings/:id/cancel
-// ==========================================
-
-export const cancel = async (req, res, next) => {
   try {
 
-    const booking = await cancelBooking(
-      req.params.id,
-      req.user._id
-    );
+    const booking =
+      await getBookingById(
+        req.params.id,
+        req.user._id
+      );
+
+
+    return res.status(200).json({
+      success: true,
+      booking
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+/*
+====================================================
+UPDATE BOOKING
+PATCH /api/bookings/:id
+====================================================
+*/
+export const updateBooking = async (
+  req,
+  res,
+  next
+) => {
+
+  try {
+
+    const booking =
+      await updateBookingService(
+        req.params.id,
+        req.user._id,
+        req.body
+      );
+
+
+    return res.status(200).json({
+      success: true,
+      message: "Booking updated successfully",
+      booking
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+/*
+====================================================
+RESCHEDULE BOOKING
+PATCH /api/bookings/:id/reschedule
+====================================================
+
+Example request:
+
+{
+  "date": "2026-09-20",
+  "time": "2:00 PM"
+}
+====================================================
+*/
+export const rescheduleBooking = async (
+  req,
+  res,
+  next
+) => {
+
+  try {
+
+    const {
+      date,
+      time
+    } = req.body;
+
+
+    const booking =
+      await rescheduleBookingService(
+        req.params.id,
+        req.user._id,
+        date,
+        time
+      );
+
+
+    return res.status(200).json({
+      success: true,
+      message: "Booking rescheduled successfully",
+      booking
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+/*
+====================================================
+CANCEL BOOKING
+PATCH /api/bookings/:id/cancel
+====================================================
+
+Example request:
+
+{
+  "reason": "I am no longer available"
+}
+====================================================
+*/
+export const cancelBooking = async (
+  req,
+  res,
+  next
+) => {
+
+  try {
+
+    const {
+      reason
+    } = req.body;
+
+
+    const booking =
+      await cancelBookingService(
+        req.params.id,
+        req.user._id,
+        reason
+      );
 
 
     return res.status(200).json({
@@ -112,14 +243,6 @@ export const cancel = async (req, res, next) => {
     });
 
   } catch (error) {
-
-    if (error.message === "Booking not found") {
-      return res.status(404).json({
-        success: false,
-        message: "Booking not found"
-      });
-    }
-
     next(error);
   }
 };
