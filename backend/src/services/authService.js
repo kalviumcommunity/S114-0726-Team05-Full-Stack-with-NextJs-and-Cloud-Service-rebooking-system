@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 import User from "../models/User.js";
 
@@ -207,4 +208,47 @@ export const getCurrentUser = async (
 
 
   return formatUser(user);
+};
+
+export const loginWithGoogleUser = async (credential) => {
+  if (!credential) {
+    const error = new Error("Google credential is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  if (!clientId) {
+    const error = new Error("Google sign-in is not configured on the server");
+    error.statusCode = 500;
+    throw error;
+  }
+
+  const tokenResponse = await fetch(
+    `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`
+  );
+  const token = await tokenResponse.json();
+
+  if (!tokenResponse.ok || token.aud !== clientId || token.email_verified !== "true") {
+    const error = new Error("Invalid Google sign-in credential");
+    error.statusCode = 401;
+    throw error;
+  }
+
+  const normalizedEmail = token.email.trim().toLowerCase();
+  let user = await User.findOne({ email: normalizedEmail });
+
+  if (!user) {
+    user = await User.create({
+      name: token.name || normalizedEmail.split("@")[0],
+      email: normalizedEmail,
+      password: await bcrypt.hash(crypto.randomBytes(32).toString("hex"), 12),
+      avatar: token.picture || ""
+    });
+  }
+
+  return {
+    token: generateToken(user),
+    user: formatUser(user)
+  };
 };
