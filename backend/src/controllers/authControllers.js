@@ -1,6 +1,7 @@
 import {
   registerUser,
   loginUser,
+  loginWithGoogleUser,
   getCurrentUser
 } from "../services/authService.js";
 
@@ -81,6 +82,21 @@ export const getMe = async (req, res, next) => {
       user
     });
 
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const loginWithGoogle = async (req, res, next) => {
+  try {
+    const result = await loginWithGoogleUser(req.body.credential);
+
+    return res.status(200).json({
+      success: true,
+      message: "Google login successful",
+      token: result.token,
+      user: result.user
+    });
   } catch (error) {
     next(error);
   }
