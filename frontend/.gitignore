@@ -1,0 +1,5 @@
+node_modules/
+list/
+.env
+.env.local
+*.log
